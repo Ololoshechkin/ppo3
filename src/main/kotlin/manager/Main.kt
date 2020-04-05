@@ -14,16 +14,17 @@ import kotlinx.coroutines.runBlocking
 import java.nio.file.Paths
 
 fun main(): Unit = runBlocking {
-    val pathToConfig = Paths.get("src/main/resources/manager.conf")
-    val config = ConfigFactory.parseFile(pathToConfig.toFile())
-    val applicationConfig = ManagerConfig(config)
-    val connection = ConnectionPoolProvider.getConnection(applicationConfig.databaseConfig)
+    val config = ManagerConfig(ConfigFactory.parseFile(Paths.get("src/main/resources/manager.conf").toFile()))
+
+    val connection = ConnectionPoolProvider.getConnection(config.databaseConfig)
     val commandDao = CommandDaoImpl(connection, RealTimeClock)
+
     val queryDao = QueryDaoImpl(connection)
+
     val commandProcessor = CommandSuspendProcessor(commandDao)
     val queryProcessor = QuerySuspendProcessor(queryDao)
 
-    embeddedServer(Netty, port = applicationConfig.apiConfig.port) {
+    embeddedServer(Netty, port = config.apiConfig.port) {
         routing {
             get("/command/new_uid") {
                 call.respondText(commandProcessor.processOrError(NewUserCommand))

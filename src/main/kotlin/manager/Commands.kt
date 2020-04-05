@@ -11,12 +11,12 @@ sealed class Command
 
 object NewUserCommand : Command()
 
-data class SubscriptionRenewalCommand(val uid: Int, val until: LocalDateTime) : Command()
+data class SubscriptionRenewalCommand(val userId: Int, val until: LocalDateTime) : Command()
 
 interface CommandDao {
     suspend fun registerNewUser(): Int
 
-    suspend fun subscriptionRenewal(uid: Int, until: LocalDateTime)
+    suspend fun subscriptionRenewal(userId: Int, until: LocalDateTime)
 }
 class CommandDaoImpl(
     private val connection: SuspendingConnection,
@@ -24,7 +24,7 @@ class CommandDaoImpl(
     private val poolSize: Int = 10
 ) : CommonDao(),
     CommandDao {
-    data class AvailableUids(val maxUsedUid: Int, val maxAvailableUid: Int)
+    data class AvailableUids(val maxUsedId: Int, val maxAvailableUid: Int)
 
     private val availableUidsRef: AtomicReference<AvailableUids> =
         AtomicReference(AvailableUids(-1, -1))
@@ -32,9 +32,9 @@ class CommandDaoImpl(
     private suspend fun getNewUid(transactionConnection: SuspendingConnection): Int {
         while (true) {
             val availableUids = availableUidsRef.get()
-            if (availableUids.maxUsedUid == availableUids.maxAvailableUid) {
+            if (availableUids.maxUsedId == availableUids.maxAvailableUid) {
                 // Доступный пул userId'ов исчерпан
-                val curMaxUid = if (availableUids.maxUsedUid == -1) {
+                val curMaxUid = if (availableUids.maxUsedId == -1) {
                     // Приложение только что запущено и нужно узнать, какой максимальный userId в БД
                     transactionConnection.sendQuery(getMaxUidQuery).rows[0].getInt("max_id")!!
                 } else {
@@ -60,7 +60,7 @@ class CommandDaoImpl(
                 return resultId
             } else {
                 // пробуем взять userId из незакончившегося пула
-                val resultId = availableUids.maxUsedUid + 1
+                val resultId = availableUids.maxUsedId + 1
                 val newAvailableUids =
                     AvailableUids(
                         resultId,
@@ -79,15 +79,15 @@ class CommandDaoImpl(
         newUid
     }
 
-    override suspend fun subscriptionRenewal(uid: Int, until: LocalDateTime) = connection.inTransaction {
+    override suspend fun subscriptionRenewal(userId: Int, until: LocalDateTime) = connection.inTransaction {
         val curDate = clock.now()
         if (!curDate.isBefore(until)) {
             throw IllegalArgumentException("Cannot processOrError renewal until $until at $curDate")
         }
-        if (!doesUserExist(uid, it)) {
-            throw IllegalArgumentException("User with userId $uid doesn't exist")
+        if (!doesUserExist(userId, it)) {
+            throw IllegalArgumentException("User with userId $userId doesn't exist")
         }
-        val maxSubscriptionDate = getMaxSubscriptionDate(uid, it)
+        val maxSubscriptionDate = getMaxSubscriptionDate(userId, it)
         if (maxSubscriptionDate != null) {
             if (!maxSubscriptionDate.isBefore(until)) {
                 throw IllegalArgumentException(
@@ -95,10 +95,10 @@ class CommandDaoImpl(
                 )
             }
         }
-        val maxUserEventId = getMaxUserEventId(uid, it)
+        val maxUserEventId = getMaxUserEventId(userId, it)
         val curUserEventId = maxUserEventId + 1
-        it.sendPreparedStatement(newEventCommand, listOf(uid, curUserEventId))
-        it.sendPreparedStatement(renewalCommand, listOf(uid, curUserEventId, until))
+        it.sendPreparedStatement(newEventCommand, listOf(userId, curUserEventId))
+        it.sendPreparedStatement(renewalCommand, listOf(userId, curUserEventId, until))
         Unit
     }
 
@@ -125,7 +125,7 @@ class CommandSuspendProcessor(private val commandDao: CommandDao) :
                 "New UID = $newUid"
             }
             is SubscriptionRenewalCommand -> {
-                commandDao.subscriptionRenewal(cmd.uid, cmd.until)
+                commandDao.subscriptionRenewal(cmd.userId, cmd.until)
                 "Successful renewal"
             }
         }

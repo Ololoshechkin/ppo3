@@ -3,11 +3,6 @@ package statistics
 import common.ConnectionPoolProvider
 import common.getTimestamp
 import common.getUid
-import statistics.command.CommandSuspendProcessor
-import statistics.command.RegisterExitCommand
-import statistics.config.ApplicationConfigImpl
-import statistics.query.GetUserStatsQuery
-import statistics.query.QuerySuspendProcessor
 import com.typesafe.config.ConfigFactory
 import kotlinx.coroutines.runBlocking
 import io.ktor.application.*
@@ -18,16 +13,15 @@ import io.ktor.server.netty.*
 import java.nio.file.Paths
 
 fun main(): Unit = runBlocking {
-    val pathToConfig = Paths.get("src/main/resources/statistics.conf")
-    val config = ConfigFactory.parseFile(pathToConfig.toFile())
-    val applicationConfig = ApplicationConfigImpl(config)
-    val connection = ConnectionPoolProvider.getConnection(applicationConfig.databaseConfig)
+    val config =
+        StatisticsConfig(ConfigFactory.parseFile(Paths.get("src/main/resources/statistics.conf").toFile()))
     val stateHolder = StatsState()
-    val queryProcessor = QuerySuspendProcessor(stateHolder)
+
+    val queryProcessor = StatisticsQuerySuspendProcessor(stateHolder)
     val commandProcessor = CommandSuspendProcessor(stateHolder)
 
-    stateHolder.init(connection)
-    embeddedServer(Netty, port = applicationConfig.apiConfig.port) {
+    stateHolder.init(connection = ConnectionPoolProvider.getConnection(config.databaseConfig))
+    embeddedServer(Netty, port = config.apiConfig.port) {
         routing {
             get("/query/get_stats") {
                 val uid = call.request.queryParameters.getUid()

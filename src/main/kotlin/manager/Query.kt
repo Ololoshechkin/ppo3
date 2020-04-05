@@ -7,15 +7,15 @@ import common.SuspendProcessor
 data class GetUserQuery(val userId: Int)
 
 interface QueryDao {
-    suspend fun getUser(uid: Int): User?
+    suspend fun getUser(userId: Int): User?
 }
 
 class QueryDaoImpl(private val connection: SuspendingConnection) : CommonDao(), QueryDao {
-    override suspend fun getUser(uid: Int): User? = connection.inTransaction {
-        if (!doesUserExist(uid, it)) {
+    override suspend fun getUser(userId: Int): User? = connection.inTransaction {
+        if (!doesUserExist(userId, it)) {
             null
         } else {
-            User(uid, getMaxSubscriptionDate(uid, it))
+            User(userId, getMaxSubscriptionDate(userId, it))
         }
     }
 }

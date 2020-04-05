@@ -1,9 +1,6 @@
 package statistics
 
 import com.github.jasync.sql.db.SuspendingConnection
-import statistics.command.UpdatableStats
-import statistics.model.UserStats
-import statistics.query.QueryableStats
 import org.joda.time.LocalDateTime
 import org.joda.time.Period
 import java.util.concurrent.ConcurrentHashMap
@@ -11,11 +8,6 @@ import java.util.concurrent.ConcurrentHashMap
 class StatsState : UpdatableStats, QueryableStats {
     private val state = ConcurrentHashMap<Int, UserStats>()
 
-    /*
-    Should be called once from a single thread.
-    Call of init should happen-before call of updateState
-    Reference should be correctly published
-     */
     suspend fun init(connection: SuspendingConnection) {
         val result = connection.sendQuery(getStatsQuery).rows
         for (curRow in result) {
@@ -26,10 +18,9 @@ class StatsState : UpdatableStats, QueryableStats {
         }
     }
 
-    // Thread-safe
-    override fun updateState(uid: Int, enterTime: LocalDateTime, exitTime: LocalDateTime) {
+    override fun updateState(userId: Int, enterTime: LocalDateTime, exitTime: LocalDateTime) {
         val period = Period.fieldDifference(enterTime, exitTime)
-        state.compute(uid) { _, curStats ->
+        state.compute(userId) { _, curStats ->
             if (curStats == null) {
                 UserStats(period.normalizedStandard(), 1)
             } else {
@@ -38,7 +29,7 @@ class StatsState : UpdatableStats, QueryableStats {
         }
     }
 
-    override fun getUserStats(uid: Int): UserStats? = state[uid]
+    override fun getUserStats(userId: Int): UserStats? = state[userId]
 
     companion object {
         const val INITIAL_TIMESTAMP = "1862-04-14T00:00:00"

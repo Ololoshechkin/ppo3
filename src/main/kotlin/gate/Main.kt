@@ -14,15 +14,13 @@ import org.joda.time.LocalDateTime
 import java.nio.file.Paths
 
 fun main(): Unit = runBlocking {
-    val pathToConfig = Paths.get("src/main/resources/gate.conf")
-    val config = ConfigFactory.parseFile(pathToConfig.toFile())
-    val applicationConfig = GateApplicationConfig(config)
-    val connection = ConnectionPoolProvider.getConnection(applicationConfig.databaseConfig)
-    val dao = GymCommandDaoImpl(connection)
-    val clientsProvider = StatsHttpClientsProviderImpl(applicationConfig.statsConfig)
+    val config = GateApplicationConfig(ConfigFactory.parseFile(Paths.get("src/main/resources/gate.conf").toFile()))
+
+    val dao = GymCommandDaoImpl(connection = ConnectionPoolProvider.getConnection(config.databaseConfig))
+    val clientsProvider = StatsHttpClientsProviderImpl(config.statsConfig)
     val commandProcessor = CommandSuspendProcessor(dao, clientsProvider)
 
-    embeddedServer(Netty, port = applicationConfig.apiConfig.port) {
+    embeddedServer(Netty, port = config.apiConfig.port) {
         routing {
             get("/command/enter") {
                 val uid = call.request.queryParameters.getUid()

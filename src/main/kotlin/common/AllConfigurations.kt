@@ -41,7 +41,7 @@ class StatsConfigImpl(conf: Config) : StatsConfig {
 }
 
 
-interface ApplicationConfig {
+interface AbstractApplicationConfig {
     val apiConfig: ApiConfig
     val databaseConfig: DatabaseConfig
     val statsConfig: StatsConfig

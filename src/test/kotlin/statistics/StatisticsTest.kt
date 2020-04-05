@@ -4,7 +4,6 @@ import com.github.jasync.sql.db.QueryResult
 import com.github.jasync.sql.db.ResultSet
 import com.github.jasync.sql.db.RowData
 import com.github.jasync.sql.db.SuspendingConnection
-import statistics.model.UserStats
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

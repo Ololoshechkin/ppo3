@@ -19,10 +19,10 @@ interface GymCommandDao {
 @Suppress("IMPLICIT_CAST_TO_ANY")
 class GymCommandDaoImpl(private val connection: SuspendingConnection) : CommonDao(), GymCommandDao {
     private suspend fun getLastUserGateEventType(
-        uid: Int,
+        userId: Int,
         transactionConnection: SuspendingConnection
     ): Event? {
-        val result = transactionConnection.sendPreparedStatement(lastGateEventQuery, listOf(uid)).rows
+        val result = transactionConnection.sendPreparedStatement(lastGateEventQuery, listOf(userId)).rows
         return if (result.size == 0) {
             null
         } else {
@@ -33,16 +33,16 @@ class GymCommandDaoImpl(private val connection: SuspendingConnection) : CommonDa
     }
 
     private suspend fun addGateEvent(
-        uid: Int,
+        userId: Int,
         eventType: GateEventType,
         eventTimestamp: LocalDateTime,
         transactionConnection: SuspendingConnection
     ) {
-        val maxEventId = getMaxUserEventId(uid, transactionConnection)
+        val maxEventId = getMaxUserEventId(userId, transactionConnection)
         val curEventId = maxEventId + 1
-        transactionConnection.sendPreparedStatement(newEventCommand, listOf(uid, curEventId))
+        transactionConnection.sendPreparedStatement(newEventCommand, listOf(userId, curEventId))
         transactionConnection
-            .sendPreparedStatement(newGateEventCommand, listOf(uid, curEventId, eventType, eventTimestamp))
+            .sendPreparedStatement(newGateEventCommand, listOf(userId, curEventId, eventType, eventTimestamp))
     }
 
     override suspend fun processGymComand(cmd: GymCommand) = when (cmd) {

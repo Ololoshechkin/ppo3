@@ -6,9 +6,9 @@ import org.joda.time.LocalDateTime
 
 abstract class CommonCommandDao {
     @Contract("!doesUserExist(userId, connection) -> fail")
-    protected suspend fun getMaxUserEventId(uid: Int, connection: SuspendingConnection): Int {
+    protected suspend fun getMaxUserEventId(userId: Int, connection: SuspendingConnection): Int {
         return connection
-            .sendPreparedStatement(maxUserEventIdQuery, listOf(uid))
+            .sendPreparedStatement(maxUserEventIdQuery, listOf(userId))
             .rows[0]
             .getInt("max")!!
     }
@@ -19,12 +19,12 @@ abstract class CommonCommandDao {
 }
 
 abstract class CommonDao : CommonCommandDao() {
-    protected suspend fun doesUserExist(uid: Int, connection: SuspendingConnection): Boolean {
-        return connection.sendPreparedStatement(getUserQuery, listOf(uid)).rows.size > 0
+    protected suspend fun doesUserExist(userId: Int, connection: SuspendingConnection): Boolean {
+        return connection.sendPreparedStatement(getUserQuery, listOf(userId)).rows.size > 0
     }
 
-    protected suspend fun getMaxSubscriptionDate(uid: Int, connection: SuspendingConnection): LocalDateTime? {
-        val result = connection.sendPreparedStatement(maxSubscriptionDateQuery, listOf(uid)).rows
+    protected suspend fun getMaxSubscriptionDate(userId: Int, connection: SuspendingConnection): LocalDateTime? {
+        val result = connection.sendPreparedStatement(maxSubscriptionDateQuery, listOf(userId)).rows
         return if (result.size > 0) {
             result[0].getAs<LocalDateTime>("end_date")
         } else {
