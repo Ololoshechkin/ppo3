@@ -12,4 +12,4 @@ fun Parameters.getTimestamp(paramName: String): LocalDateTime {
     return LocalDateTime.parse(this[paramName] ?: StatsState.INITIAL_TIMESTAMP)
 }
 
-fun LocalDateTgime.tostr(): String = this.toString("yyyy-MM-dd'T'HH:mm:ss")
+fun LocalDateTime.tostr(): String = this.toString("yyyy-MM-dd'T'HH:mm:ss")
